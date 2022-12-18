@@ -14,7 +14,8 @@ from homeassistant.components.media_player.const import (
     SUPPORT_PLAY,
     SUPPORT_PAUSE,
     SUPPORT_PREVIOUS_TRACK,
-    SUPPORT_NEXT_TRACK
+    SUPPORT_NEXT_TRACK,
+    SUPPORT_SEEK
 )
 from homeassistant.const import (
     CONF_HOST,
@@ -29,7 +30,7 @@ _LOGGER = logging.getLogger(__name__)
 DEFAULT_NAME = "xLights Schedule"
 
 SUPPORT_XLIGHTS = (
-    SUPPORT_VOLUME_SET | SUPPORT_VOLUME_STEP | SUPPORT_SELECT_SOURCE | SUPPORT_STOP | SUPPORT_PLAY | SUPPORT_PAUSE | SUPPORT_PREVIOUS_TRACK | SUPPORT_NEXT_TRACK
+    SUPPORT_VOLUME_SET | SUPPORT_VOLUME_STEP | SUPPORT_SELECT_SOURCE | SUPPORT_STOP | SUPPORT_PLAY | SUPPORT_PAUSE | SUPPORT_PREVIOUS_TRACK | SUPPORT_NEXT_TRACK | SUPPORT_SEEK
 )
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
@@ -70,17 +71,19 @@ class xLightsSchedule(MediaPlayerEntity):
             self._state = STATE_PLAYING
         else:
             self._state = STATE_IDLE
-        self._volume = status["volume"] / 100
+        self._volume = int(status["volume"]) / 100
         self._media_title = status["step"]
         self._media_playlist = status["playlist"]
-        self._media_duration = int(status["lengthms"])
-        self._media_position = int(status["positionms"])
+        self._media_duration = int(status["lengthms"]) / 1000
+        self._media_position = int(status["positionms"]) / 1000
         self._media_position_updated_at = datetime.datetime.now()
 
         playlists = requests.get(
-            "http://%s/api/playlists/playable" % (self._host)
+            "http://%s/xScheduleQuery?Query=GetPlayLists" % (self._host)
         ).json()
-        self._playlists = playlists
+        playlists = playlists["playlists"]
+        for i in range(len(playlists)):
+            self._playlists.append(playlists[i]['name']);
 
     @property
     def name(self):
@@ -139,13 +142,13 @@ class xLightsSchedule(MediaPlayerEntity):
 
     def select_source(self, source):
         """Choose a playlist to play."""
-        requests.get("http://%s/xScheduleCommand?Command=Play specified playlist&Parameters=" % (self._host, source))
+        requests.get("http://%s/xScheduleCommand?Command=Play specified playlist&Parameters=%s" % (self._host, source))
 
     def set_volume_level(self, volume):
         """Set volume level."""
         volume = int(volume * 100)
         _LOGGER.info("volume is %s" % (volume))
-        requests.get("http://%s/xScheduleCommand?Command=Set volume to&Parameters="volume % (self._host))
+        requests.get("http://%s/xScheduleCommand?Command=Set volume to&Parameters=%s" % (self._host, volume))
 
     def volume_up(self):
         """Increase volume by 1 step."""
@@ -174,3 +177,8 @@ class xLightsSchedule(MediaPlayerEntity):
     def media_previous_track(self):
         """Prev FPP Sequences playing"""
         requests.get("http://%s/xScheduleCommand?Command=Prior step in current playlist" % (self._host))
+        
+    def media_seek(self, position: float) -> None:
+        """Seek FPP Sequences playing"""
+        position = int(position * 1000)
+        requests.get("http://%s/xScheduleCommand?Command=Set step position ms&Parameters=%s" % (self._host, position))
