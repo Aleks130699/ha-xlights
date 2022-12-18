@@ -82,6 +82,7 @@ class xLightsSchedule(MediaPlayerEntity):
             "http://%s/xScheduleQuery?Query=GetPlayLists" % (self._host)
         ).json()
         playlists = playlists["playlists"]
+        self._playlists.clear()
         for i in range(len(playlists)):
             self._playlists.append(playlists[i]['name']);
 
