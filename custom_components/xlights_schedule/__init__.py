@@ -1,1 +1,1 @@
-"""The Falcon Pi Player Integration."""
+"""The xLights Schedule Integration."""
