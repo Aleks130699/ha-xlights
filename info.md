@@ -2,7 +2,7 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge)](https://github.com/custom-components/hacs)
 [![](https://img.shields.io/github/license/koolsb/ha-fpp?style=for-the-badge)](LICENSE)
 
-# HomeAssistant - Falcon Pi Player (FPP) Component
+# HomeAssistant - xLights Schedule Component
 
 This is a custom component to allow control of the Falcon Pi Player in [Home Assistant](https://home-assistant.io). 
 
