@@ -3,6 +3,7 @@ import logging
 import requests
 import datetime
 import voluptuous as vol
+import socket
 
 from homeassistant.components.media_player import PLATFORM_SCHEMA, MediaPlayerEntity
 from homeassistant.components.media_player.const import (
@@ -21,6 +22,8 @@ from homeassistant.const import (
     CONF_HOST,
     CONF_NAME,
     STATE_IDLE,
+    STATE_OFF,
+    STATE_PAUSED,
     STATE_PLAYING,
 )
 import homeassistant.helpers.config_validation as cv
@@ -62,29 +65,41 @@ class xLightsSchedule(MediaPlayerEntity):
         self._media_duration = 0
         self._media_position = 0
         self._media_position_updated_at = datetime.datetime.now()
+        self._attr_unique_id = "media_player_{name}"
+        # self._available = False
+        
 
     def update(self):
         """Get the latest state from the player."""
-        status = requests.get("http://%s/xScheduleQuery?Query=GetPlayingStatus" % (self._host)).json()
-
-        if status["status"] == "playing":
-            self._state = STATE_PLAYING
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)
+        ip, port = self._host.split(":")
+        result = sock.connect_ex((ip,int(port)))
+        if result != 0:
+            self._state = "off"
         else:
-            self._state = STATE_IDLE
-        self._volume = int(status["volume"]) / 100
-        self._media_title = status["step"]
-        self._media_playlist = status["playlist"]
-        self._media_duration = int(status["lengthms"]) / 1000
-        self._media_position = int(status["positionms"]) / 1000
-        self._media_position_updated_at = datetime.datetime.now()
-
-        playlists = requests.get(
-            "http://%s/xScheduleQuery?Query=GetPlayLists" % (self._host)
-        ).json()
-        playlists = playlists["playlists"]
-        self._playlists.clear()
-        for i in range(len(playlists)):
-            self._playlists.append(playlists[i]['name']);
+            status = requests.get("http://%s/xScheduleQuery?Query=GetPlayingStatus" % (self._host)).json()
+    
+            self._state = status["status"] 
+            self._volume = int(status["volume"]) / 100
+            if self._state == "playing":
+                self._media_title = status["step"]
+                self._media_playlist = status["playlist"]
+                self._media_duration = int(status["lengthms"]) / 1000
+                self._media_position = int(status["positionms"]) / 1000
+                self._media_position_updated_at = datetime.datetime.now()
+            
+            # self._available = True
+    
+            playlists = requests.get(
+                "http://%s/xScheduleQuery?Query=GetPlayLists" % (self._host)
+            ).json()
+            playlists = playlists["playlists"]
+            self._playlists.clear()
+            for i in range(len(playlists)):
+                self._playlists.append(playlists[i]['name']);
+                
+            # self._last_updated = time.time()
 
     @property
     def name(self):
@@ -93,8 +108,26 @@ class xLightsSchedule(MediaPlayerEntity):
 
     @property
     def state(self):
-        """Return the state of the device."""
-        return self._state
+        """Return the state of the device"""
+        if self._state is None:
+            return STATE_OFF
+        if self._state == "off":
+            return STATE_OFF
+        if self._state == "idle":
+            return STATE_IDLE
+        if self._state == "playing":
+            return STATE_PLAYING
+        if self._state == "paused":
+            return STATE_PAUSED
+
+        return STATE_IDLE
+        
+    # @property
+    # def available(self):
+    #     """Return if we're available"""
+
+    #     diff = round(time.time() - self._last_updated)
+    #     return diff < 30
 
     @property
     def volume_level(self):
