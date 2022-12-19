@@ -1,10 +1,10 @@
-[![](https://img.shields.io/github/release/koolsb/ha-fpp/all.svg?style=for-the-badge)](https://github.com/koolsb/ha-fpp/releases)
+[![](https://img.shields.io/github/release/Aleks130699/ha-xlights/all.svg?style=for-the-badge)](https://github.com/Aleks130699/ha-xlights/releases)
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge)](https://github.com/custom-components/hacs)
-[![](https://img.shields.io/github/license/koolsb/ha-fpp?style=for-the-badge)](LICENSE)
+[![](https://img.shields.io/github/license/Aleks130699/ha-xlights?style=for-the-badge)](LICENSE)
 
-# HomeAssistant - xLights Schedule (FPP) Component
+# HomeAssistant - xLights Schedule Component
 
-This is a custom component to allow control of the Falcon Pi Player in [Home Assistant](https://home-assistant.io). 
+This is a custom component to allow control of the xLights Schedule in [Home Assistant](https://home-assistant.io). 
 
 # Features:
 
@@ -13,6 +13,10 @@ This is a custom component to allow control of the Falcon Pi Player in [Home Ass
 * Start a playlist or sequence
 * Stop a playlist or sequence
 * Set or step the player volume
+* Next a sequence
+* Prev a sequence
+* Pause a sequence
+* Resume a sequence
 
 # Installation
 
@@ -25,7 +29,7 @@ Install via HACS.
 Install it as any custom homeassistant component:
 
 1. Download `custom_components` folder.
-2. Copy the `falcon_pi_player` directory to the `custom_components` directory of your homeassistant installation. Your `custom_components` directory resides within your homeassistant configuration directory.
+2. Copy the `xlights_schedule` directory to the `custom_components` directory of your homeassistant installation. Your `custom_components` directory resides within your homeassistant configuration directory.
 
 **Note**: If the `custom_components` directory does not exist, you need to create it.
 
@@ -35,7 +39,7 @@ After a correct installation, your configuration directory should look like the 
     └── ...
     └── configuration.yaml
     └── custom_components
-        └── falcon_pi_player.py
+        └── xlights_schedule.py
             └── __init__.py
             └── media_player.py
             └── manifest.json
@@ -47,9 +51,9 @@ After a correct installation, your configuration directory should look like the 
     ```
     # Example configuration.yaml entry
     media_player:
-      - platform: falcon_pi_player
+      - platform: xlights_schedule
         name: FPP_NAME
-        host: IP_ADDRESS (or hostname)
+        host: IP_ADDRESS:PORT (or hostname:port)
 
 2. Reboot Home Assistant
 3. You're good to go!
