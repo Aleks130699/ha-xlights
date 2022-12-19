@@ -39,7 +39,7 @@ After a correct installation, your configuration directory should look like the 
     └── ...
     └── configuration.yaml
     └── custom_components
-        └── xlights_schedule.py
+        └── xlights_schedule
             └── __init__.py
             └── media_player.py
             └── manifest.json
@@ -52,7 +52,7 @@ After a correct installation, your configuration directory should look like the 
     # Example configuration.yaml entry
     media_player:
       - platform: xlights_schedule
-        name: FPP_NAME
+        name: NAME
         host: IP_ADDRESS:PORT (or hostname:port)
 
 2. Reboot Home Assistant
