@@ -17,6 +17,7 @@ This is a custom component to allow control of the xLights Schedule in [Home Ass
 * Prev a sequence
 * Pause a sequence
 * Resume a sequence
+* Seek a sequence
 
 # Installation
 
