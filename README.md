@@ -4,7 +4,7 @@
 
 # HomeAssistant - xLights Schedule Component
 
-This is a custom component to allow control of the xLights Schedule in [Home Assistant](https://home-assistant.io). 
+This is a custom component to allow control of the [xLights](https://xlights.org) Schedule in [Home Assistant](https://home-assistant.io). 
 
 # Features:
 
