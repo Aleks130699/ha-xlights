@@ -1,13 +1,16 @@
 {
     "domain": "xlights_schedule",
     "name": "xLights Schedule",
-    "documentation": "https://github.com/Aleks130699/ha-xlights",
-    "codeowners": ["@Aleks130699"],
-    "iot_class": "local_polling",
-    "dependencies": ["http"],
     "after_dependencies": ["media_player"],
-    "requirements": [],
-    "config_flow": false,
+    "codeowners": ["@Aleks130699"],
+    "config_flow": true,
+    "dependencies": ["http"],
+    "documentation": "https://github.com/Aleks130699/ha-xlights",
+    "homekit": {},
+    "iot_class": "local_polling",
     "issue_tracker": "https://github.com/Aleks130699/ha-xlights/issues",
+    "requirements": [],
+    "ssdp": [],
+    "zeroconf": [],
     "version": "0.1.0"
   }
