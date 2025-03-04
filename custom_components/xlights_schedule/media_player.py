@@ -1,22 +1,28 @@
 """Support for the xLights Schedule."""
 import logging
 import requests
+import time
 import datetime
 import voluptuous as vol
 import socket
 
-from homeassistant.components.media_player import PLATFORM_SCHEMA, MediaPlayerEntity
-from homeassistant.components.media_player.const import (
-    DOMAIN,
-    SUPPORT_VOLUME_SET,
-    SUPPORT_VOLUME_STEP,
-    SUPPORT_SELECT_SOURCE,
-    SUPPORT_STOP,
-    SUPPORT_PLAY,
-    SUPPORT_PAUSE,
-    SUPPORT_PREVIOUS_TRACK,
-    SUPPORT_NEXT_TRACK,
-    SUPPORT_SEEK
+SECONDS_BETWEEN_LIBRARY_REFRESH = 500
+CURRENTLY_LOGGING = False
+
+_LOGGER = None
+if CURRENTLY_LOGGING:
+    _LOGGER = open('./log.txt','w+')#logging.getLogger(__name__)
+
+from homeassistant.components.media_player import (
+    PLATFORM_SCHEMA,
+    ATTR_MEDIA_ENQUEUE,
+    BrowseMedia,
+    MediaPlayerEnqueue,
+    MediaPlayerEntity,
+    MediaPlayerEntityFeature,
+    MediaPlayerState,
+    MediaType,
+    RepeatMode,
 )
 from homeassistant.const import (
     CONF_HOST,
@@ -28,12 +34,22 @@ from homeassistant.const import (
 )
 import homeassistant.helpers.config_validation as cv
 
-_LOGGER = logging.getLogger(__name__)
 
 DEFAULT_NAME = "xLights Schedule"
 
 SUPPORT_XLIGHTS = (
-    SUPPORT_VOLUME_SET | SUPPORT_VOLUME_STEP | SUPPORT_SELECT_SOURCE | SUPPORT_STOP | SUPPORT_PLAY | SUPPORT_PAUSE | SUPPORT_PREVIOUS_TRACK | SUPPORT_NEXT_TRACK | SUPPORT_SEEK
+    MediaPlayerEntityFeature.BROWSE_MEDIA
+    | MediaPlayerEntityFeature.NEXT_TRACK
+    | MediaPlayerEntityFeature.PAUSE
+    | MediaPlayerEntityFeature.PLAY
+    | MediaPlayerEntityFeature.PLAY_MEDIA
+    | MediaPlayerEntityFeature.PREVIOUS_TRACK
+    # | MediaPlayerEntityFeature.REPEAT_SET
+    | MediaPlayerEntityFeature.SEEK
+    | MediaPlayerEntityFeature.SELECT_SOURCE
+    | MediaPlayerEntityFeature.SHUFFLE_SET
+    | MediaPlayerEntityFeature.VOLUME_SET
+    | MediaPlayerEntityFeature.TURN_OFF
 )
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
@@ -42,7 +58,6 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
     }
 )
-
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the FPP platform."""
@@ -59,13 +74,15 @@ class xLightsSchedule(MediaPlayerEntity):
         self._name = name
         self._state = STATE_IDLE
         self._volume = 0
+        self._last_update = 0
         self._media_title = ""
         self._media_playlist = ""
-        self._playlists = []
+        self._playlists = {}
         self._media_duration = 0
         self._media_position = 0
         self._media_position_updated_at = datetime.datetime.now()
         self._attr_unique_id = "media_player_{name}"
+        self._attr_shuffle = False
         # self._available = False
         
 
@@ -88,18 +105,26 @@ class xLightsSchedule(MediaPlayerEntity):
                 self._media_duration = int(status["lengthms"]) / 1000
                 self._media_position = int(status["positionms"]) / 1000
                 self._media_position_updated_at = datetime.datetime.now()
+                self._attr_shuffle = status["random"].upper() == "TRUE"
             
-            # self._available = True
-    
+            # Only update playlists once every UPDATE seconds
+            if time.time() - self._last_update < SECONDS_BETWEEN_LIBRARY_REFRESH:
+                return 
+                
+            self._last_update = time.time()
             playlists = requests.get(
                 "http://%s/xScheduleQuery?Query=GetPlayLists" % (self._host)
             ).json()
             playlists = playlists["playlists"]
             self._playlists.clear()
             for i in range(len(playlists)):
-                self._playlists.append(playlists[i]['name']);
+                name = playlists[i]['name']
+                self._playlists[name] = self.all_songs_for_playlist(name)
+                log("{}",self._playlists[name])
+            log("{}",self._playlists)
                 
-            # self._last_updated = time.time()
+        
+            
 
     @property
     def name(self):
@@ -142,21 +167,25 @@ class xLightsSchedule(MediaPlayerEntity):
     @property
     def media_title(self):
         """Title of current playing media."""
+        log("Media title {}",self._media_title)
         return self._media_title
 
     @property
     def media_playlist(self):
         """Title of current playlist."""
+        log("Playlist {}",self._media_playlist)
         return self._media_playlist
 
     @property
     def source_list(self):
         """Return available playlists"""
-        return self._playlists
+        log("Playlists:{}",self._playlists)
+        return list(self._playlists.keys())
 
     @property
     def source(self):
         """Return the current playlist."""
+        log("Playing Playlist:{}",self._media_playlist)
         return self._media_playlist
 
     @property
@@ -173,6 +202,11 @@ class xLightsSchedule(MediaPlayerEntity):
     def media_duration(self):
         """Return the duration of the current media."""
         return self._media_duration
+    
+    @property
+    def shuffle(self) -> bool | None:
+        """Boolean if shuffle is enabled."""
+        return self._attr_shuffle
 
     def select_source(self, source):
         """Choose a playlist to play."""
@@ -181,7 +215,7 @@ class xLightsSchedule(MediaPlayerEntity):
     def set_volume_level(self, volume):
         """Set volume level."""
         volume = int(volume * 100)
-        _LOGGER.info("volume is %s" % (volume))
+        #log("New Volume: {}",volume)
         requests.get("http://%s/xScheduleCommand?Command=Set volume to&Parameters=%s" % (self._host, volume))
 
     def volume_up(self):
@@ -216,3 +250,127 @@ class xLightsSchedule(MediaPlayerEntity):
         """Seek FPP Sequences playing"""
         position = int(position * 1000)
         requests.get("http://%s/xScheduleCommand?Command=Set step position ms&Parameters=%s" % (self._host, position))
+        
+    def set_shuffle(self, shuffle: bool) -> None:
+        """Enable/disable shuffle mode."""
+        requests.get("http://%s/xScheduleCommand?Command=Toggle current playlist random" % (self._host))
+    
+    # Used as a STOP button the power button shows up but the STOP button wont
+    def turn_off(self) -> None:
+        """Send stop command."""
+        requests.get("http://%s/xScheduleCommand?Command=Stop" % (self._host)) # url_encode_string(self._media_playlist)
+    
+    
+    def play_media(
+        self, media_type: MediaType | str, media_id: str, **kwargs: any
+    ) -> None:
+        """Play a piece of media."""
+        log("Playing song:{},{}",media_type,media_id)
+        # ID contains the <playlist>,<song>
+        (playlist, song) = media_id.split(',')
+        req_url = "http://{}/xScheduleCommand?Command={}&Parameters={},{}".format(self._host,url_encode_string("Play playlist starting at step"),url_encode_string(playlist),url_encode_string(song))
+        requests.get(req_url)
+        
+        requests.get
+
+    async def async_browse_media(
+        self,
+        media_content_type: MediaType | str | None = None,
+        media_content_id: str | None = None,
+    ) -> BrowseMedia:
+        log("====")
+        log("{}\n{}\n{}",self,media_content_type,media_content_id)
+        log("====")
+        
+        if media_content_type == None:
+            return self.all_playlists()
+        if media_content_type == "playlist":
+            log("Returning {} | {}",media_content_id,self._playlists[media_content_id])
+            return BrowseMedia(
+            can_expand=True,
+            can_play=False,
+            children_media_class="music",
+            media_class="playlist",
+            media_content_id=media_content_id,
+            media_content_type="playlist",
+            title=media_content_id, # Gets the name of the playlist
+            thumbnail=None,
+            children = self._playlists[media_content_id]
+        )
+            
+        
+
+
+    def all_playlists(self) -> BrowseMedia:
+        return BrowseMedia(
+            can_expand=True,
+            can_play=False,
+            children_media_class="playlist",
+            media_class="directory",
+            media_content_id="Available Playlists",
+            media_content_type="playlist",
+            thumbnail=None,
+            title="Playlists",
+            children= self.all_playlists_payload()
+        )
+        
+    def all_playlists_payload(self)-> list[BrowseMedia]:
+        media_list = []
+        for name in self._playlists:
+            media_list.append(
+                BrowseMedia(
+            can_expand=True,
+            can_play=False,
+            children_media_class="music",
+            media_class="playlist",
+            media_content_id=name,
+            media_content_type="playlist",
+            title=name, # Gets the name of the playlist
+            thumbnail=None,
+        ))
+        
+        return media_list
+    
+    def all_songs_for_playlist(self, name)-> list[BrowseMedia]:
+        log("http://%s/xScheduleQuery?Query=GetPlayListSteps&Parameters=%s" % (self._host,url_encode_string(name)))
+        songs = requests.get("http://%s/xScheduleQuery?Query=GetPlayListSteps&Parameters=%s" % (self._host,url_encode_string(name))).json()
+        songs = songs["steps"]
+        song_list = []
+        
+        for song in songs:
+            song_list.append(BrowseMedia(
+            can_expand=False,
+            can_play=True,
+            media_class="music",
+            media_content_id=name + ',' + song["name"], #Encode ID w/ <playlist>,<song>
+            media_content_type="music",
+            title=song["name"],
+            thumbnail=None,
+        ))
+        #log(song_list)
+        return song_list
+            
+            
+def log(string, *args):
+    if not CURRENTLY_LOGGING:
+        return
+    _LOGGER.write(string.format(*args) + "\n")
+    _LOGGER.flush()
+    
+    
+    
+def _fix_string(string):
+  	return string[2:].zfill(2)
+
+def _encode_component(component):
+    """Encodes a single URL component (key or value)."""
+    if component.isalnum() or component in "-_.~":
+        return component
+    return "%{}".format(_fix_string(hex(ord(component)))).upper()
+
+def url_encode_string(string):
+  total = ""
+  for char in string:
+    total+=_encode_component(char)
+  
+  return total

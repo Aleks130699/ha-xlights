@@ -4,20 +4,20 @@
 
 # HomeAssistant - xLights Schedule Component
 
-This is a custom component to allow control of the [xLights](https://xlights.org) Schedule in [Home Assistant](https://home-assistant.io). 
+This is a custom component to allow control of the [xLights](https://xlights.org) Schedule in [Home Assistant](https://home-assistant.io).
 
 # Features:
 
-* View current playing sequence and playlist
-* List all available playlist and sequences as sources
-* Start a playlist or sequence
-* Stop a playlist or sequence
-* Set or step the player volume
-* Next a sequence
-* Prev a sequence
-* Pause a sequence
-* Resume a sequence
-* Seek a sequence
+- View current playing sequence and playlist
+- List all available playlist and sequences as sources
+- Start a playlist or sequence
+- Stop a playlist or sequence
+- Set or step the player volume
+- Next a sequence
+- Prev a sequence
+- Pause a sequence
+- Resume a sequence
+- Seek a sequence
 
 # Installation
 
@@ -36,7 +36,6 @@ Install it as any custom homeassistant component:
 
 After a correct installation, your configuration directory should look like the following:
 
-    
     └── ...
     └── configuration.yaml
     └── custom_components
@@ -44,17 +43,37 @@ After a correct installation, your configuration directory should look like the 
             └── __init__.py
             └── media_player.py
             └── manifest.json
-    
 
 # Configuration
 
 1. Enable the component by editing your configuration.yaml file (within the config directory as well). Edit it by adding the following lines:
-    ```
-    # Example configuration.yaml entry
-    media_player:
-      - platform: xlights_schedule
-        name: NAME
-        host: IP_ADDRESS:PORT (or hostname:port)
+
+   ```
+   # Example configuration.yaml entry
+   media_player:
+     - platform: xlights_schedule
+       name: NAME
+       host: IP_ADDRESS:PORT (or hostname:port)
+
+   ```
 
 2. Reboot Home Assistant
 3. You're good to go!
+
+# Images
+
+### Overview
+
+![Overview](./images/overview.PNG)
+
+### Playing
+
+![Playing](./images/playing.PNG)
+
+### Playlists
+
+![Playlist](./images/playlists.PNG)
+
+### Song Selection
+
+![Song Selection](./images/song_selection.PNG)
